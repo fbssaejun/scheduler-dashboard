@@ -9,6 +9,8 @@ import {
   getMostPopularDay,
   getInterviewsPerDay
  } from "helpers/selectors";
+ import { setInterview } from "helpers/reducers";
+
 
 //Fake data
 
@@ -72,6 +74,17 @@ class Dashboard extends Component {
       });
     });
 
+    this.socket = new WebSocket(process.env.REACT_APP_WEBSOCKET_URL);
+
+    this.socket.onmessage = event => {
+      const data = JSON.parse(event.data);
+    
+      if (typeof data === "object" && data.type === "SET_INTERVIEW") {
+        this.setState(previousState =>
+          setInterview(previousState, data.id, data.interview)
+        );
+      }
+    };
   }
   
   componentDidUpdate(previousProps, previousState) {
@@ -79,7 +92,10 @@ class Dashboard extends Component {
       localStorage.setItem("focused", JSON.stringify(this.state.focused));
     }
   }
-  
+
+  componentWillUnmount() {
+    this.socket.close();
+  }
   
   render() {
     const dashboardClasses = classnames("dashboard", {
@@ -92,7 +108,7 @@ class Dashboard extends Component {
 
     const panelArray = data
       .filter(panel => this.state.focused === null || this.state.focused === panel.id)
-      .map(panel => <Panel key={panel.id} label={panel.label} value={panel.value} onSelect={() => this.selectPanel(panel.id)}/>)
+      .map(panel => <Panel key={panel.id} label={panel.label} value={panel.getValue(this.state)} onSelect={() => this.selectPanel(panel.id)}/>)
 
 
     return <main className={dashboardClasses} >
